@@ -3,10 +3,11 @@
   <component name="NewModuleRootManager">
     <content url="file://$MODULE_DIR$" />
     <content url="file://$MODULE_DIR$/../nature_methods_multicut_pipeline">
+      <sourceFolder url="file://$MODULE_DIR$/../nature_methods_multicut_pipeline" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/../nature_methods_multicut_pipeline/software" isTestSource="false" />
     </content>
     <content url="file://$MODULE_DIR$/../nmmp_experiments/evaluation" />
-    <orderEntry type="jdk" jdkName="Python 2.7.13 (~/miniconda3/envs/multicut-software-2/bin/python2.7)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Python 2.7.13 (~/miniconda3/envs/mc_pipeline_new/bin/python)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
   <component name="TestRunnerService">
