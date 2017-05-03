@@ -26,77 +26,77 @@ if __name__ == '__main__':
     # Load train datasets: for each source
     # TODO Change here when switching sample
     train_raw_sources = [
-        source_folder + 'cremi.splA.train.raw_neurons.crop.axes_xyz.split_z.h5',
-        source_folder + 'cremi.splA.train.raw_neurons.crop.axes_xyz.split_z.h5',
+        #source_folder + 'cremi.splA.train.raw_neurons.crop.axes_xyz.split_z.h5',
+        #source_folder + 'cremi.splA.train.raw_neurons.crop.axes_xyz.split_z.h5',
         source_folder + 'cremi.splB.train.raw_neurons_defect_correct.crop.axes_xyz.split_z.h5',
-        source_folder + 'cremi.splC.train.raw_neurons_defect_correct.crop.axes_xyz.split_z.h5',
-        source_folder + 'cremi.splC.train.raw_neurons_defect_correct.crop.axes_xyz.split_z.h5'
+        #source_folder + 'cremi.splC.train.raw_neurons_defect_correct.crop.axes_xyz.split_z.h5',
+        #source_folder + 'cremi.splC.train.raw_neurons_defect_correct.crop.axes_xyz.split_z.h5'
     ]
     # TODO Change here
     train_raw_sources_keys = [
+        #'z/0/raw',
+        #'z/1/raw',
         'z/0/raw',
-        'z/1/raw',
-        'z/0/raw',
-        'z/0/raw',
-        'z/1/raw'
+        #'z/0/raw',
+        #'z/1/raw'
     ]
     # TODO Change here when switching sample
     train_probs_sources = [
-        source_folder + 'cremi.splA.train.probs.crop.axes_xyz.split_z.h5',
-        source_folder + 'cremi.splA.train.probs.crop.axes_xyz.split_z.h5',
+        #source_folder + 'cremi.splA.train.probs.crop.axes_xyz.split_z.h5',
+        #source_folder + 'cremi.splA.train.probs.crop.axes_xyz.split_z.h5',
         source_folder + 'cremi.splB.train.probs_defect_correct.crop.axes_xyz.split_z.h5',
-        source_folder + 'cremi.splC.train.probs_defect_correct.crop.axes_xyz.split_z.h5',
-        source_folder + 'cremi.splC.train.probs_defect_correct.crop.axes_xyz.split_z.h5'
+        #source_folder + 'cremi.splC.train.probs_defect_correct.crop.axes_xyz.split_z.h5',
+        #source_folder + 'cremi.splC.train.probs_defect_correct.crop.axes_xyz.split_z.h5'
     ]
     # TODO Change here
     train_probs_sources_keys = [
+        #'z/0/data',
+        #'z/1/data',
         'z/0/data',
-        'z/1/data',
-        'z/0/data',
-        'z/0/data',
-        'z/1/data'
+        #'z/0/data',
+        #'z/1/data'
     ]
     # TODO Change here when switching sample
     gtruths_paths = [
-        source_folder + 'cremi.splA.train.raw_neurons.crop.axes_xyz.split_z.h5',
-        source_folder + 'cremi.splA.train.raw_neurons.crop.axes_xyz.split_z.h5',
+        #source_folder + 'cremi.splA.train.raw_neurons.crop.axes_xyz.split_z.h5',
+        #source_folder + 'cremi.splA.train.raw_neurons.crop.axes_xyz.split_z.h5',
         source_folder + 'cremi.splB.train.raw_neurons_defect_correct.crop.axes_xyz.split_z.h5',
-        source_folder + 'cremi.splC.train.raw_neurons_defect_correct.crop.axes_xyz.split_z.h5',
-        source_folder + 'cremi.splC.train.raw_neurons_defect_correct.crop.axes_xyz.split_z.h5'
+        #source_folder + 'cremi.splC.train.raw_neurons_defect_correct.crop.axes_xyz.split_z.h5',
+        #source_folder + 'cremi.splC.train.raw_neurons_defect_correct.crop.axes_xyz.split_z.h5'
     ]
     # TODO Change here
     gtruths_keys = [
+        #'z/0/neuron_ids',
+        #'z/1/neuron_ids',
         'z/0/neuron_ids',
-        'z/1/neuron_ids',
-        'z/0/neuron_ids',
-        'z/0/neuron_ids',
-        'z/1/neuron_ids'
+        #'z/0/neuron_ids',
+        #'z/1/neuron_ids'
     ]
     # TODO Change here
     ds_names = [
-        'splA_z0',
-        'splA_z1',
+        #'splA_z0',
+        #'splA_z1',
         'splB_z0',
-        'splC_z0',
-        'splC_z1'
+        #'splC_z0',
+        #'splC_z1'
     ]
 
     # Training segmentations
     # TODO Change here when switching sample
     train_segs = [
-        [source_folder + 'cremi.splA.train.mcseg_betas.crop.axes_xyz.split_z.h5'] * 9,
-        [source_folder + 'cremi.splA.train.mcseg_betas.crop.axes_xyz.split_z.h5'] * 9,
+        #[source_folder + 'cremi.splA.train.mcseg_betas.crop.axes_xyz.split_z.h5'] * 9,
+        #[source_folder + 'cremi.splA.train.mcseg_betas.crop.axes_xyz.split_z.h5'] * 9,
         [source_folder + 'cremi.splB.train.mcseg_betas.crop.axes_xyz.split_z.h5'] * 9,
-        [source_folder + 'cremi.splC.train.mcseg_betas.crop.axes_xyz.split_z.h5'] * 9,
-        [source_folder + 'cremi.splC.train.mcseg_betas.crop.axes_xyz.split_z.h5'] * 9
+        #[source_folder + 'cremi.splC.train.mcseg_betas.crop.axes_xyz.split_z.h5'] * 9,
+        #[source_folder + 'cremi.splC.train.mcseg_betas.crop.axes_xyz.split_z.h5'] * 9
     ]
     # TODO Change here
     train_keys = [
+        #['z/0/beta_0.5', 'z/0/beta_0.45', 'z/0/beta_0.55', 'z/0/beta_0.4', 'z/0/beta_0.6', 'z/0/beta_0.35', 'z/0/beta_0.65', 'z/0/beta_0.3', 'z/0/beta_0.7'],
+        #['z/1/beta_0.5', 'z/1/beta_0.45', 'z/1/beta_0.55', 'z/1/beta_0.4', 'z/1/beta_0.6', 'z/1/beta_0.35', 'z/1/beta_0.65', 'z/1/beta_0.3', 'z/1/beta_0.7'],
         ['z/0/beta_0.5', 'z/0/beta_0.45', 'z/0/beta_0.55', 'z/0/beta_0.4', 'z/0/beta_0.6', 'z/0/beta_0.35', 'z/0/beta_0.65', 'z/0/beta_0.3', 'z/0/beta_0.7'],
-        ['z/1/beta_0.5', 'z/1/beta_0.45', 'z/1/beta_0.55', 'z/1/beta_0.4', 'z/1/beta_0.6', 'z/1/beta_0.35', 'z/1/beta_0.65', 'z/1/beta_0.3', 'z/1/beta_0.7'],
-        ['z/0/beta_0.5', 'z/0/beta_0.45', 'z/0/beta_0.55', 'z/0/beta_0.4', 'z/0/beta_0.6', 'z/0/beta_0.35', 'z/0/beta_0.65', 'z/0/beta_0.3', 'z/0/beta_0.7'],
-        ['z/0/beta_0.5', 'z/0/beta_0.45', 'z/0/beta_0.55', 'z/0/beta_0.4', 'z/0/beta_0.6', 'z/0/beta_0.35', 'z/0/beta_0.65', 'z/0/beta_0.3', 'z/0/beta_0.7'],
-        ['z/1/beta_0.5', 'z/1/beta_0.45', 'z/1/beta_0.55', 'z/1/beta_0.4', 'z/1/beta_0.6', 'z/1/beta_0.35', 'z/1/beta_0.65', 'z/1/beta_0.3', 'z/1/beta_0.7']
+        #['z/0/beta_0.5', 'z/0/beta_0.45', 'z/0/beta_0.55', 'z/0/beta_0.4', 'z/0/beta_0.6', 'z/0/beta_0.35', 'z/0/beta_0.65', 'z/0/beta_0.3', 'z/0/beta_0.7'],
+        #['z/1/beta_0.5', 'z/1/beta_0.45', 'z/1/beta_0.55', 'z/1/beta_0.4', 'z/1/beta_0.6', 'z/1/beta_0.35', 'z/1/beta_0.65', 'z/1/beta_0.3', 'z/1/beta_0.7']
     ]
 
     # The test segmentation
