@@ -8,10 +8,17 @@ from Queue import LifoQueue
 
 
 
-def check_node(volume,point,is_queued,is_visited):
+def check_box(volume,point,is_queued_map,is_visited_map):
     """checks the Box around the point for points which are 1,
     but were not already put in the queue and returns them in a list"""
-    return_list=[]
+    list_not_visited=[]
+    list_not_queued = []
+    list_are_near = []
+
+    if point[0]==126 and point[1]==303 and point[2]==7:
+        print"blabla"
+        pass
+
 
     for x in xrange(-1, 2):
 
@@ -31,16 +38,22 @@ def check_node(volume,point,is_queued,is_visited):
                 if point[2] + z < 0 or point[2] + z > volume.shape[2] - 1:
                     continue
 
-                # Dont put the middle point in the queue
+                # Dont look at the middle point
                 if x == 0 and y == 0 and z == 0:
                     continue
 
                 # TODO case if loop, all are queued but not visited
-                if volume[point[0] + x, point[1] + y, point[2] + z] == 1 and is_queued[point[0] + x, point[1] + y, point[2] + z]==0:
-                        return_list.extend([[point[0] + x, point[1] + y, point[2] + z]])
+                if volume[point[0] + x, point[1] + y, point[2] + z] == 1:
 
-    is_visited[point[0],point[1],point[2]]=1
-    return return_list,is_visited
+                    list_are_near.extend([[point[0] + x, point[1] + y, point[2] + z]])
+
+                    if is_queued_map[point[0] + x, point[1] + y, point[2] + z]==0:
+                        list_not_queued.extend([[point[0] + x, point[1] + y, point[2] + z]])
+                    if is_visited_map[point[0] + x, point[1] + y, point[2] + z]==0:
+                        list_not_visited.extend([[point[0] + x, point[1] + y, point[2] + z]])
+
+    is_visited_map[point[0],point[1],point[2]]=1
+    return list_not_queued,list_not_visited,is_visited_map,list_are_near
 
 
 
@@ -51,21 +64,21 @@ def init(volume):
 
     point = np.array((np.where(volume)[:][0][0], np.where(volume)[:][1][0], np.where(volume)[:][2][0]))
 
-    is_visited = np.zeros(volume.shape, dtype=int)
-    is_visited[point[0], point[1], point[2]]=1
+    is_visited_map = np.zeros(volume.shape, dtype=int)
+    is_visited_map[point[0], point[1], point[2]]=1
 
-    is_queued =np.zeros(volume.shape, dtype=int)
-    is_queued[point[0], point[1], point[2]]=1
+    is_queued_map =np.zeros(volume.shape, dtype=int)
+    is_queued_map[point[0], point[1], point[2]]=1
 
-    branches,_ = check_node(volume,point,is_queued,np.zeros(volume.shape, dtype=int))
+    not_queued,_,_,_ = check_box(volume,point,is_queued_map,np.zeros(volume.shape, dtype=int))
 
-    if len(branches)==2:
+    if len(not_queued)==2:
         while True:
-            point = np.array(branches[0])
-            is_queued[branches[0][0], branches[0][1], branches[0][2]] = 1
-            branches,_ = check_node(volume, point, is_queued, np.zeros(volume.shape, dtype=int))
+            point = np.array(not_queued[0])
+            is_queued_map[not_queued[0][0], not_queued[0][1], not_queued[0][2]] = 1
+            not_queued,_,_,_ = check_box(volume, point, is_queued_map, np.zeros(volume.shape, dtype=int))
 
-            if len(branches)!=1:
+            if len(not_queued)!=1:
                 break
 
 
@@ -88,7 +101,7 @@ def grow():
 
 
 
-def skeleton_to_graph(img):
+def skeleton_to_graph(img,skel):
 
     """main function"""
 
@@ -96,22 +109,26 @@ def skeleton_to_graph(img):
 
     #initializing
     volume = deepcopy(img)
-    is_visited = np.zeros(volume.shape, dtype=int)
-    is_queued = np.zeros(volume.shape, dtype=int)
+    is_visited_map = np.zeros(volume.shape, dtype=int)
+    is_queued_map = np.zeros(volume.shape, dtype=int)
     nodes = {}
     edges = []
     last_node = 1
     queue = LifoQueue()
     point=init(volume)
+    ignore = []
+    leftover_list= []
+    special_case_list=[]
+    branch_point_list=[]
 
-    is_queued[point[0], point[1], point[2]] = 1
-    branches,is_visited=check_node(volume, point, is_queued, is_visited)
+    is_queued_map[point[0], point[1], point[2]] = 1
+    not_queued,not_visited,is_visited_map,are_near=check_box(volume, point, is_queued_map, is_visited_map)
     nodes[last_node]=point
 
 
-    for i in xrange(0,len(branches)):
-        queue.put(np.array([branches[i],last_node]))
-        is_queued[branches[i][0], branches[i][1], branches[i][2]] = 1
+    for i in xrange(0,len(not_queued)):
+        queue.put(np.array([not_queued[i],last_node]))
+        is_queued_map[not_queued[i][0], not_queued[i][1], not_queued[i][2]] = 1
 
     print "initialized"
     print "-----------"
@@ -121,17 +138,56 @@ def skeleton_to_graph(img):
 
         point,last_node=queue.get()
 
-        branches,is_visited = check_node(volume, point, is_queued, is_visited)
+        not_queued,not_visited,is_visited_map,are_near = check_box(volume, point, is_queued_map, is_visited_map)
 
-        if len(branches)==1:
-            queue.put(np.array([branches[0],last_node]))
+        #standart branch point
+        if len(not_queued)==1:
+            queue.put(np.array([not_queued[0],last_node]))
+            is_queued_map[not_queued[0][0], not_queued[0][1], not_queued[0][2]] = 1
+            branch_point_list.extend([[point[0], point[1], point[2]]])
 
-        pass
+
+        #terminating point
+        elif len(not_queued)==0 and len(not_visited)==0 and len(are_near)==1:
+            nodes[last_node+1] = point
+            edges.extend([[last_node, last_node+1]])
+            print "found terminating point"
+
+
+        #node point
+        elif len(not_queued)>1:
+
+            nodes[last_node + 1] = point    #build node
+            edges.extend([[last_node, last_node + 1]]) #build edge
+
+            #putting node branches in the queue
+            for x in not_queued:
+                queue.put(np.array([x, last_node+1]))
+                is_queued_map[x[0], x[1], x[2]] = 1
+
+            print "found node point "
+
+        #special case 1
+        elif len(not_queued) == 0 and len(not_visited) == 0 and len(are_near) > 1:
+            print "found special case point"
+            special_case_list.extend([[point[0], point[1], point[2]]])
+            continue
+
+
+        # TODO is this the right looping condition ?
+        else:
+            leftover_list.extend([[point[0], point[1], point[2]]])
+
+
+    print "not noted points :", len(np.where(volume)[0]) - len(branch_point_list) - len(special_case_list) - len(test_list) - len(nodes)
+
+    return nodes,edges
 
 
 
 
-    pass
+
+
 
 
 
@@ -159,11 +215,19 @@ def skeleton_to_graph(img):
 
 if __name__ == "__main__":
 
+    print "loading volume.."
+
     with open('/mnt/localdata03/amatskev/neuraldata/test/first_try_skel_img.pkl', mode='r') as f:
         img = pickle.load(f)
 
+    with open('/mnt/localdata03/amatskev/neuraldata/test/first_try_skel.pkl', mode='r') as f:
+        skel = pickle.load(f)
 
-    skeleton_to_graph(img)
+    print "volume loaded"
+    skel=skel.transpose()
+    nodes, edges = skeleton_to_graph(img,skel)
+
+    print
 
 
 
