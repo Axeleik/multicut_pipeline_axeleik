@@ -170,9 +170,8 @@ def skeleton_to_graph(img,skel):
         assert(i<2)
 
         if i == 1:
-            print i
-            print "blabla"
             continue
+
 
 
         not_queued,not_visited,is_visited_map,are_near = check_box(volume, point, is_queued_map, is_visited_map)
@@ -235,8 +234,6 @@ def skeleton_to_graph(img,skel):
 
         else:
             leftover_list.extend([[point[0], point[1], point[2]]])
-            print "blabla"
-            print "test"
 
 
 
