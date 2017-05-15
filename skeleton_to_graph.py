@@ -16,7 +16,6 @@ def check_box(volume,point,is_queued_map,is_visited_map):
     list_are_near = []
 
     if point[0]==1227 and point[1]==735 and point[2]==27:
-        print"blabla"
         pass
 
 
@@ -45,13 +44,6 @@ def check_box(volume,point,is_queued_map,is_visited_map):
                 # TODO case if loop, all are queued but not visited
                 if volume[point[0] + x, point[1] + y, point[2] + z] == 1:
 
-                    if point[0] == 126 and point[1] == 302 and point[2] == 7:
-                        print"blabla"
-                        pass
-
-                    if point[0] == 126 and point[1] == 303 and point[2] == 7:
-                        print"blabla"
-                        pass
 
                     list_are_near.extend([[point[0] + x, point[1] + y, point[2] + z]])
 
@@ -149,13 +141,13 @@ def skeleton_to_graph(img,skel):
 
     while queue.qsize():
 
-
-
+        #pull item from queue
         point,current_node=queue.get()
 
 
-        i = 0
+
         #looping condition from other side
+        i = 0
         if len(looping_list_vector)!=0:
 
             loop_index=0
@@ -168,7 +160,6 @@ def skeleton_to_graph(img,skel):
                     loop_index=idx
 
         assert(i<2)
-
         if i == 1:
             continue
 
@@ -176,11 +167,14 @@ def skeleton_to_graph(img,skel):
 
         not_queued,not_visited,is_visited_map,are_near = check_box(volume, point, is_queued_map, is_visited_map)
 
+
+
         #standart branch point
         if len(not_queued)==1:
             queue.put(np.array([not_queued[0],current_node]))
             is_queued_map[not_queued[0][0], not_queued[0][1], not_queued[0][2]] = 1
             branch_point_list.extend([[point[0], point[1], point[2]]])
+
 
 
         #terminating point
@@ -190,6 +184,7 @@ def skeleton_to_graph(img,skel):
             node_list.extend([[point[0], point[1], point[2]]])
             edges.extend([[current_node, last_node]])
             print "found terminating point"
+
 
 
         #node point
@@ -207,12 +202,12 @@ def skeleton_to_graph(img,skel):
 
             print "found node point "
 
-        #special case 1
+
+
+        #special case
         elif len(not_queued) == 0 and len(not_visited) == 0 and len(are_near) > 1:
             print "found special case point"
-            special_case_list.extend([[point[0], point[1], point[2]]])
-            continue
-
+            special_case_list.extend([[[point[0], point[1], point[2]],0,0,len(are_near)]])
 
 
 
@@ -225,15 +220,10 @@ def skeleton_to_graph(img,skel):
             branch_point_list.extend([[point[0], point[1], point[2]]])
             print "found loop "
 
-            pass
-
-        #special branch point
-        elif len(not_queued)==0 and len(not_visited)==0 and len(are_near)>1:
-            special_branch_point_list.extend([[point[0], point[1], point[2]]])
 
 
         else:
-            leftover_list.extend([[point[0], point[1], point[2]]])
+            leftover_list.extend([[[point[0], point[1], point[2]],not_queued,not_visited,len(are_near)]])
 
 
 
@@ -243,106 +233,31 @@ def skeleton_to_graph(img,skel):
 
 
 
-
-
-    allofthem=np.concatenate((np.array(branch_point_list),np.array(special_case_list),np.array(leftover_list),np.array(node_list),np.array(special_branch_point_list)))
-    nr1=np.ascontiguousarray(allofthem).view(np.dtype((np.void, allofthem.dtype.itemsize * allofthem.shape[1])))
-    assert(len(skel)>len(allofthem))
-    nr2=np.ascontiguousarray(skel).view(np.dtype((np.void, skel.dtype.itemsize * skel.shape[1])))
-
-    a=np.setdiff1d(nr1,nr2)
-
-    new=a.view(allofthem.dtype)
-    new=new.reshape(new.shape[0]/3,3)
-
-
-
-
-
-
-
-    delbranch=[]
-    z=len(branch_point_list)
-    #test for not fetched
-    for idx1, val1 in enumerate(branch_point_list):
-
-        if idx1==100:
-
-            pass
-            pass
-
-        print idx1, " of ", z-1, " elements"
-        for idx2,val2 in enumerate(skel):
-
-
-
-            if all(val1==val2):
-                delbranch.extend([val2])
-                continue
-
-    delnodes = []
-    z = len(branch_point_list)
-    # test for not fetched
-    for idx1, val1 in enumerate(nodes):
-
-        print idx1, " of ", z - 1, " elements"
-        for idx2, val2 in enumerate(skel):
-
-            if all(val1 == val2):
-                delnodes.extend([val2])
-                continue
-
-    delspecial = []
-    z = len(branch_point_list)
-    # test for not fetched
-    for idx1, val1 in enumerate(special_case_list):
-
-        print idx1, " of ", z - 1, " elements"
-        for idx2, val2 in enumerate(skel):
-
-            if all(val1 == val2):
-                delspecial.extend([val2])
-                continue
-
-    delleft = []
-    z = len(leftover_list)
-    # test for not fetched
-    for idx1, val1 in enumerate(leftover_list):
-
-        print idx1, " of ", z - 1, " elements"
-        for idx2, val2 in enumerate(skel):
-
-            if all(val1 == val2):
-                delleft.extend([val2])
-                continue
-
-
-
-
-
-
-
-
     return nodes,edges
 
 
 
-
-
-
-def show(volume,point,mode="v",z=2):
+def show(volume,is_queued_map,is_visited_map,is_node_map,point,mode="vo",z=2):
 
     if mode=="vo":
         print volume[point[0]-z:point[0]+z+1, point[1]-z:point[1]+z+1, point[2]-z:point[2]+z+1]
 
     if mode=="no":
-        print volume[point[0]-z:point[0]+z+1, point[1]-z:point[1]+z+1, point[2]-z:point[2]+z+1]
+        print is_node_map[point[0]-z:point[0]+z+1, point[1]-z:point[1]+z+1, point[2]-z:point[2]+z+1]
 
     if mode=="qu":
-        print volume[point[0]-z:point[0]+z+1, point[1]-z:point[1]+z+1, point[2]-z:point[2]+z+1]
+        print is_queued_map[point[0]-z:point[0]+z+1, point[1]-z:point[1]+z+1, point[2]-z:point[2]+z+1]
 
     if mode=="vi":
-        print volume[point[0]-z:point[0]+z+1, point[1]-z:point[1]+z+1, point[2]-z:point[2]+z+1]
+        print is_visited_map[point[0]-z:point[0]+z+1, point[1]-z:point[1]+z+1, point[2]-z:point[2]+z+1]
+
+    if mode=="vovi":
+        print is_visited_map[point[0]-z:point[0]+z+1, point[1]-z:point[1]+z+1, point[2]-z:point[2]+z+1]==volume[point[0]-z:point[0]+z+1, point[1]-z:point[1]+z+1, point[2]-z:point[2]+z+1]
+
+
+
+
+
 
 
 
