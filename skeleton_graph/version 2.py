@@ -45,11 +45,8 @@ def check_box(volume,point,is_queued_map,is_visited_map,stage=1):
 
                 if volume[point[0] + x, point[1] + y, point[2] + z] > 0:
 
-                    if stage==1:
-                        list_are_near.extend([[point[0] + x, point[1] + y, point[2] + z]])
+                    list_are_near.extend([[point[0] + x, point[1] + y, point[2] + z]])
 
-                    elif stage==2:
-                        list_are_near.extend([volume[point[0] + x, point[1] + y, point[2] + z]])
 
                     if is_queued_map[point[0] + x, point[1] + y, point[2] + z]==0:
                         list_not_queued.extend([[point[0] + x, point[1] + y, point[2] + z]])
@@ -119,6 +116,7 @@ def stage_one(img):
     leftover_list= []
     branch_point_list=[]
     node_list = []
+    length=0
 
     is_queued_map[point[0], point[1], point[2]] = 1
     not_queued,not_visited,is_visited_map,are_near=check_box(volume, point, is_queued_map, is_visited_map)
@@ -126,7 +124,7 @@ def stage_one(img):
 
 
     for i in xrange(0,len(not_queued)):
-        queue.put(np.array([not_queued[i],current_node]))
+        queue.put(np.array([not_queued[i],current_node,length]))
         is_queued_map[not_queued[i][0], not_queued[i][1], not_queued[i][2]] = 1
 
     assert(len(not_queued)>0)
@@ -150,7 +148,7 @@ def stage_one(img):
     while queue.qsize():
 
         #pull item from queue
-        point,current_node=queue.get()
+        point,current_node,length=queue.get()
 
         not_queued,not_visited,is_visited_map,are_near = check_box(volume, point, is_queued_map, is_visited_map)
 
@@ -158,7 +156,8 @@ def stage_one(img):
 
         #standart point
         if len(not_queued)==1:
-            queue.put(np.array([not_queued[0],current_node]))
+            length = length + np.linalg.norm([point[0] - not_queued[0][0], point[1] - not_queued[0][1], (point[2] - not_queued[0][2]) * 10])
+            queue.put(np.array([not_queued[0],current_node,length]))
             is_queued_map[not_queued[0][0], not_queued[0][1], not_queued[0][2]] = 1
             branch_point_list.extend([[point[0], point[1], point[2]]])
             is_standart_map[point[0], point[1], point[2]] = 1
@@ -170,7 +169,7 @@ def stage_one(img):
             last_node=last_node+1
             nodes[last_node] = point
             node_list.extend([[point[0], point[1], point[2]]])
-            edges.extend([[current_node, last_node]])
+            edges.extend([[[current_node, last_node],length]])
             is_term_map[point[0], point[1], point[2]] = last_node
             is_node_map[point[0], point[1], point[2]] = last_node
             print "found terminating point"
@@ -181,11 +180,12 @@ def stage_one(img):
         elif len(not_queued)>1:
             last_node = last_node + 1
             nodes[last_node ] = point    #build node
-            edges.extend([[current_node, last_node]]) #build edge
+            edges.extend([[[current_node, last_node],length]]) #build edge
             node_list.extend([[point[0], point[1], point[2]]])
             #putting node branches in the queue
             for x in not_queued:
-                queue.put(np.array([x, last_node]))
+                length = np.linalg.norm([point[0] - x[0], point[1] - x[1], (point[2] - x[2]) * 10])
+                queue.put(np.array([x, last_node,length]))
                 is_queued_map[x[0], x[1], x[2]] = 1
 
             is_branch_map[point[0], point[1], point[2]] = last_node
@@ -203,6 +203,7 @@ def stage_one(img):
 
 
     print "------------------------------"
+    print "queue is empty"
     print "------------------------------"
     assert((len(np.where(volume)[0]) - len(np.where(is_branch_map)[0]) - len(np.where(is_term_map)[0]) - len(np.where(is_standart_map)[0]))==0), "too few points were looked at/some were looked at twice !"
     print "all points were looked at"
@@ -230,7 +231,7 @@ def stage_two(is_node_map, is_term_map, edges):
         _,_,_,list_near_nodes = check_box(is_node_map, point, np.zeros(is_node_map.shape, dtype=int), np.zeros(is_node_map.shape, dtype=int),2 )
 
         for i in xrange(0,len(list_near_nodes)):
-            edges.extend([[is_term_map[point[0],point[1],point[2]], list_near_nodes[i]]]) #build edge
+            edges.extend([[[is_term_map[point[0],point[1],point[2]], is_node_map[list_near_nodes[i][0],list_near_nodes[i][1],list_near_nodes[i][2]]],np.linalg.norm([point[0] - list_near_nodes[i][0], point[1] - list_near_nodes[i][1], (point[2] - list_near_nodes[i][2]) * 10])]]) #build edge
 
     print "------------------------"
     print "second stage finished"
@@ -238,8 +239,16 @@ def stage_two(is_node_map, is_term_map, edges):
     return edges
 
 
+#forming list of terminal numbers
+def form_term_list(is_term_map):
 
+    term_where = np.array(np.where(is_term_map)).transpose()
+    term_list=[]
+    for point in term_where:
+        term_list.extend([is_term_map[point[0],point[1],point[2]]])
+    term_list = np.array([term for term in term_list])
 
+    return term_list
 
 
 def skeleton_to_graph(img):
@@ -259,9 +268,9 @@ def skeleton_to_graph(img):
     print len(edges2)-len(edges1) ," new edges from stage two "
     print  "--> Total of ",len(edges2)," edges"
 
-
-
-    return nodes,edges,time_between_stage_1_and_stage_2-time_before_stage_one_1,time_after_stage_2-time_between_stage_1_and_stage_2
+    term_list = form_term_list(is_term_map)
+    term_list -= 1
+    return nodes,np.array(edges),term_list,time_between_stage_1_and_stage_2-time_before_stage_one_1,time_after_stage_2-time_between_stage_1_and_stage_2
 
 
 #for debugging purposes
@@ -284,6 +293,80 @@ def show(volume,is_queued_map,is_visited_map,is_node_map,point,mode="vo",z=2):
 
 
 
+#extract edges and lengths for graph
+def extract_edges_and_lengths(nodes,edges):
+
+    node_list = np.array(nodes.keys())
+    edges_list = []
+    edges_len=[]
+    edges_list.extend(edges[:, 0])
+    edges_len.extend(edges[:, 1])
+    edges_len = np.array([edge for edge in edges_len])
+
+    edges_list = np.array(edges_list, dtype="uint32")
+    edges_list = np.sort(edges_list, axis=1)
+    edges_list -= 1
+    n_nodes = edges_list.max() + 1
+
+    assert len(node_list) == n_nodes
+
+    g = nifty.graph.UndirectedGraph(n_nodes)
+    g.insertEdges(edges_list)
+
+    return g,edges_len
+
+
+
+# check that we have the correct number of connected components
+def check_connected_components(g):
+    cc = nifty.graph.components(g)
+    cc.build()
+
+    components = cc.componentLabels()
+
+    #print components
+    n_ccs = len(np.unique(components))
+    assert n_ccs == 1, str(n_ccs)
+    print "Only 1 connected componets -> Passed Test"
+
+# find the shortest paths between nodes in the skeleton
+# here, I am simply using a subset of nodes.
+# What we actually want is to do this for all terminal nodes
+def shortest_paths_in_skeleton(g, weights,term_list):
+
+    # choose 200 random test nodes
+    #sample_nodes = np.random.choice(g.numberOfNodes, 50, replace = False)
+    #sample_nodes = sample_nodes[:3]
+
+    # the array we use to count number of times an edge was visited in
+    # a shortest paths
+    sp_edge_counts = np.zeros(g.numberOfEdges, dtype = 'uint32')
+
+    # iterate over the sampled nodes and for each one find
+    # the shortest path to all other nodes
+    # (if this turns out to take to long, we can parallelize this)
+    path_finder = nifty.graph.ShortestPathDijkstra(g)
+    for ii, source_node in enumerate(term_list):
+        print ii," of ", len(term_list)
+        # the target nodes are all other nodes, except the one we are currently using as source node
+        target_nodes = np.delete(term_list, ii)
+
+        # run the actual shortest path algorithm, this returns a list with all the nodes that make up the shortest paths
+        shortest_paths = path_finder.runSingleSourceMultiTarget(weights.tolist(), source_node, target_nodes)
+        assert len(shortest_paths) == len(target_nodes)
+
+        # we follow the shortest path and increase the path count for each edge that was taken
+        # this is implemented pretty naively right now, again if this turns out to be a bottleneck, we can speed this up
+        for path in shortest_paths:
+
+            # we follow the path, get the two adjacent nodes and increase the corresponding edge count
+            last_node = path[0]
+            for node in path[1:]:
+                edge_id = g.findEdge(last_node, node) # this returns the edge_id belonging to the 2 nodes in question
+                sp_edge_counts[edge_id] += 1
+                last_node = node
+
+    return sp_edge_counts
 
 
 if __name__ == "__main__":
@@ -293,14 +376,6 @@ if __name__ == "__main__":
 
     print "loading volume.."
 
-    # # pull volume from file
-    # print "pulling Volume.."
-    # print "-------------------"
-    # f = h5py.File("/mnt/localdata03/amatskev/neuraldata/skelexp/result.h5", mode='r')
-    # Volume = np.array(f["z/1/test"], dtype=np.int32)
-    # print "volume pulled"
-    # print "-------------------"
-
     with open('/mnt/localdata03/amatskev/neuraldata/test/first_try_skel_img.pkl', mode='r') as f:
         img = pickle.load(f)
 
@@ -308,28 +383,22 @@ if __name__ == "__main__":
 
     time_after_volume = time()
 
-    # # mask
-    # Volume[Volume != 10] = 0
-    # Volume[Volume == 10] = 1
-    # print "volume masked"
-    # print "-------------------"
-    #
-    # time_after_masking = time()
-    #
-    # # skeletonize
-    # img = skeletonize_3d(Volume)
-    # print "volume skeletonized"
-    # print "-------------------"
-    #
-    # time_after_skeletonizing = time()
-    #
 
-
-    nodes, edges,time_stage_one,time_stage_two = skeleton_to_graph(img)
+    nodes, edges,term_list,time_stage_one,time_stage_two = skeleton_to_graph(img)
 
     time_loading_volume = time_after_volume - time_before_volume
-    # time_masking_volume = time_after_masking - time_after_volume
-    # time_skeletonizing_volume = time_after_skeletonizing - time_after_masking
+
+    graph1_time=time()
+    g, weights = extract_edges_and_lengths(nodes,edges)
+    graph2_time = time()
+    check_connected_components(g)
+    graph3_time=time()
+    edge_counts = shortest_paths_in_skeleton(g, weights,term_list)
+    graph4_time=time()
+
+    print "jo"
+
+
 
     print "----------------------------------------------------"
     print " loading volume took ", time_loading_volume," seconds"
@@ -338,15 +407,11 @@ if __name__ == "__main__":
     print " stage one took      ", time_stage_one, " seconds"
     print " stage two took      ", time_stage_two, " seconds"
     # print " all of them took    ", time_loading_volume + time_masking_volume + time_skeletonizing_volume + time_stage_one + time_stage_two, " seconds"
-    print " all of them took    ", time_loading_volume + time_stage_one + time_stage_two, " seconds"
+    print "  extract_edges_and_lengths took  ", graph2_time-graph1_time, " seconds"
+    print "  check_connected_components took  ", graph3_time - graph2_time, " seconds"
+    print "  shortest_paths_in_skeleton took  ", graph4_time-graph3_time, " seconds"
+    print " all of them took    ", time_loading_volume + time_stage_one + time_stage_two + (graph2_time-graph1_time) + (graph3_time-graph2_time) + (graph4_time-graph3_time) , " seconds in debugging mode"
 
-
-
-    # 1. construct graph
-    graph = nifty.graph.UndirectedGraph(len(nodes))
-    graph.insertEdges(np.array(edges,dtype="uint32"))
-
-    pass
 
 
 """
