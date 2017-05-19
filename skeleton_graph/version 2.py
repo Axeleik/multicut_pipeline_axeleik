@@ -299,27 +299,59 @@ def show(volume,is_queued_map,is_visited_map,is_node_map,point,mode="vo",z=2):
 
 
 
-#extract edges and lengths for graph
-def extract_edges_and_lengths(nodes,edges):
 
+
+
+
+
+
+
+
+# make the rows of array unique
+# see http://stackoverflow.com/questions/16970982/find-unique-rows-in-numpy-array
+def get_unique_rows(array, return_index=False):
+    array_view = np.ascontiguousarray(array).view(np.dtype((np.void, array.dtype.itemsize * array.shape[1])))
+    _, idx = np.unique(array_view, return_index=True)
+    unique_rows = array[idx]
+    if return_index:
+        return unique_rows, idx
+    else:
+        return unique_rows
+
+
+
+
+
+def graph_and_edge_weights(nodes,edges_and_lens):
+
+
+    edges = []
+    edge_lens = []
+    edges.extend(edges_and_lens[:, 0])
+    edges = np.array(edges,dtype="uint32")
+    edge_lens.extend(edges_and_lens[:, 1])
+    edge_lens = np.array([edge for edge in edge_lens])
+    edges = np.sort(edges, axis=1)
+    # remove duplicates from edges and edge-lens
+    edges, unique_idx = get_unique_rows(edges, return_index=True)
+    edge_lens = edge_lens[unique_idx]
+    edges_and_lens = edges_and_lens[unique_idx]
+
+    assert len(edges) == len(edge_lens)
+    assert edges.shape[1] == 2
     node_list = np.array(nodes.keys())
-    edges_list = []
-    edges_len=[]
-    edges_list.extend(edges[:, 0])
-    edges_len.extend(edges[:, 1])
-    edges_len = np.array([edge for edge in edges_len])
-
-    edges_list = np.array(edges_list, dtype="uint32")
-    edges_list = np.sort(edges_list, axis=1)
-    edges_list -= 1
-    n_nodes = edges_list.max() + 1
-
+    edges = np.array(edges, dtype='uint32')
+    edges = np.sort(edges, axis=1)
+    edges -= 1
+    n_nodes = edges.max() + 1
     assert len(node_list) == n_nodes
-
+    assert len(node_list) == n_nodes
     g = nifty.graph.UndirectedGraph(n_nodes)
-    g.insertEdges(edges_list)
+    g.insertEdges(edges)
+    assert g.numberOfEdges == len(edge_lens), '%i, %i' % (g.numberOfEdges, len(edge_lens))
+    return g, edge_lens,edges_and_lens
 
-    return g,edges_len
+
 
 
 
@@ -335,44 +367,73 @@ def check_connected_components(g):
     assert n_ccs == 1, str(n_ccs)
     print "Only 1 connected componets -> Passed Test"
 
-# find the shortest paths between nodes in the skeleton
-# here, I am simply using a subset of nodes.
-# What we actually want is to do this for all terminal nodes
-def shortest_paths_in_skeleton(g, weights,term_list):
 
-    # choose 200 random test nodes
-    #sample_nodes = np.random.choice(g.numberOfNodes, 50, replace = False)
-    #sample_nodes = sample_nodes[:3]
 
-    # the array we use to count number of times an edge was visited in
-    # a shortest paths
-    sp_edge_counts = np.zeros(g.numberOfEdges, dtype = 'uint32')
 
-    # iterate over the sampled nodes and for each one find
-    # the shortest path to all other nodes
-    # (if this turns out to take to long, we can parallelize this)
+
+
+
+
+
+
+
+def edge_paths_and_counts_for_nodes(g, weights, node_list):
+    """
+    Returns the path of edges for all pairs of nodes in node list as
+    well as the number of times each edge is included in a shortest path.
+    @params:
+    g         : nifty.graph.UndirectedGraph, the underlying graph
+    weights   : list[float], the edge weights for shortest paths
+    node_list : list[int],   the list of nodes that will be considered for the shortest paths
+    @returns:
+    edge_paths: dict[tuple(int,int),list[int]] : Dictionary with list of edge-ids corresponding to the
+                shortest path for each pair in node_list
+    edge_counts: np.array[int] : Array with number of times each edge was visited in a shortest path
+    """
+    edge_paths = {}
+    edge_counts = np.zeros(g.numberOfEdges, dtype = 'uint32')
     path_finder = nifty.graph.ShortestPathDijkstra(g)
-    for ii, source_node in enumerate(term_list):
-        print ii," of ", len(term_list)
-        # the target nodes are all other nodes, except the one we are currently using as source node
-        target_nodes = np.delete(term_list, ii)
-
-        # run the actual shortest path algorithm, this returns a list with all the nodes that make up the shortest paths
-        shortest_paths = path_finder.runSingleSourceMultiTarget(weights.tolist(), source_node, target_nodes)
+    for ii, u in enumerate(node_list):
+        print ii ," of ", len(node_list)
+        # target all nodes in node list that we have not visited as source
+        # already (for these the path is already present)
+        target_nodes = node_list[ii+1:]
+        shortest_paths = path_finder.runSingleSourceMultiTarget(weights.tolist(), u, target_nodes)
         assert len(shortest_paths) == len(target_nodes)
-
-        # we follow the shortest path and increase the path count for each edge that was taken
-        # this is implemented pretty naively right now, again if this turns out to be a bottleneck, we can speed this up
-        for path in shortest_paths:
-
-            # we follow the path, get the two adjacent nodes and increase the corresponding edge count
-            last_node = path[0]
-            for node in path[1:]:
-                edge_id = g.findEdge(last_node, node) # this returns the edge_id belonging to the 2 nodes in question
-                sp_edge_counts[edge_id] += 1
+        ## associate each shortest paths with the correct uv pair
+        ## and return it on the edge level
+        #
+        # I have implemented some nifty functions to do the conversion
+        # paths of nodes to list of edges in c++ directly
+        # this speeds up things, but is not in the conda package yet
+        #
+        #paths_found, this_paths = g.edgesFromNodePaths(shortest_paths)
+        #assert len(this_paths) == len(target_nodes)
+        #assert np.all(paths_found)
+        #for ii, edge_ids in enumerate(this_paths):
+        #    edge_counts[edge_ids] += 1
+        #    v = target_nodes[ii]
+        #    edge_paths[(u,v)] = edge_ids
+        # pure python impl
+        for jj, sp in enumerate(shortest_paths):
+            edge_list = []
+            # get the correct target node
+            v = target_nodes[jj]
+            # walk along the paths and find the edges
+            last_node = sp[0]
+            assert last_node == v, "%i, %i" % (last_node, v)
+            for node in sp[1:]:
+                edge_id = g.findEdge(last_node, node)
+                edge_list.append(edge_id)
+                edge_counts[edge_id] += 1
                 last_node = node
+            # make sur that the last node we found is the target node
+            assert last_node == u, "%i, %i" % (last_node, u)
+            edge_paths[(u,v)] = edge_list
+    return edge_paths, edge_counts
 
-    return sp_edge_counts
+
+
 
 
 if __name__ == "__main__":
@@ -380,50 +441,57 @@ if __name__ == "__main__":
 
     time_before_volume=time()
 
-    print "loading volume.."
+    #print "loading volume.."
 
     img = np.load("/mnt/localdata03/amatskev/neuraldata/test/skel_img.npz")['arr_0']
 
-    print "volume loaded"
+    #print "volume loaded"
 
 
-    time_after_volume = time()
+    #time_after_volume = time()
 
 
     nodes, edges,term_list,time_stage_one,time_stage_two = skeleton_to_graph(img)
 
-    time_loading_volume = time_after_volume - time_before_volume
+    #time_loading_volume = time_after_volume - time_before_volume
 
-    edges_build_map= np.zeros(img.shape, dtype=int)
 
-    for i in edges:
-        for u in i[2]:
-            edges_build_map[u[0],u[1],u[2]]=1
+    #GRAPH STUFF
 
-    assert((edges_build_map==img).all())
-    graph1_time=time()
-    g, weights = extract_edges_and_lengths(nodes,edges)
-    graph2_time = time()
+    #graph1_time=time()
+    g,edge_lens,edges = graph_and_edge_weights(nodes,edges)
+    #graph2_time = time()
     check_connected_components(g)
-    graph3_time=time()
-    edge_counts = shortest_paths_in_skeleton(g, weights,term_list)
-    graph4_time=time()
+    #graph3_time=time()
+    edge_paths, edge_counts = edge_paths_and_counts_for_nodes(g, edge_lens,term_list[:30])
+    #graph4_time=time()
+    edge_list = g.uvIds()
 
-    print "jo"
+    edge_paths_julian={}
+
+    for pair in edge_paths.keys():
+        edge_paths_julian[pair]=[]
+
+        for idx in edge_paths[pair]:
+            edge_paths_julian[pair].extend(edges[idx][2])
+            print "hi"
 
 
 
-    print "----------------------------------------------------"
-    print " loading volume took ", time_loading_volume," seconds"
-    # print " masking volume took ", time_masking_volume, " seconds"
-    # print " skeletonizing took  ", time_skeletonizing_volume, " seconds" #
-    print " stage one took      ", time_stage_one, " seconds"
-    print " stage two took      ", time_stage_two, " seconds"
-    # print " all of them took    ", time_loading_volume + time_masking_volume + time_skeletonizing_volume + time_stage_one + time_stage_two, " seconds"
-    print "  extract_edges_and_lengths took  ", graph2_time-graph1_time, " seconds"
-    print "  check_connected_components took  ", graph3_time - graph2_time, " seconds"
-    print "  shortest_paths_in_skeleton took  ", graph4_time-graph3_time, " seconds"
-    print " all of them took    ", time_loading_volume + time_stage_one + time_stage_two + (graph2_time-graph1_time) + (graph3_time-graph2_time) + (graph4_time-graph3_time) , " seconds in debugging mode"
+
+
+
+    # print "----------------------------------------------------"
+    # print " loading volume took ", time_loading_volume," seconds"
+    # # print " masking volume took ", time_masking_volume, " seconds"
+    # # print " skeletonizing took  ", time_skeletonizing_volume, " seconds" #
+    # print " stage one took      ", time_stage_one, " seconds"
+    # print " stage two took      ", time_stage_two, " seconds"
+    # # print " all of them took    ", time_loading_volume + time_masking_volume + time_skeletonizing_volume + time_stage_one + time_stage_two, " seconds"
+    # print "  extract_edges_and_lengths took  ", graph2_time-graph1_time, " seconds"
+    # print "  check_connected_components took  ", graph3_time - graph2_time, " seconds"
+    # print "  shortest_paths_in_skeleton took  ", graph4_time-graph3_time, " seconds"
+    # print " all of them took    ", time_loading_volume + time_stage_one + time_stage_two + (graph2_time-graph1_time) + (graph3_time-graph2_time) + (graph4_time-graph3_time) , " seconds in debugging mode"
 
 
 
