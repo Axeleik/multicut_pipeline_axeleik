@@ -117,6 +117,8 @@ def stage_one(img):
     branch_point_list=[]
     node_list = []
     length=0
+    edge_list=[]
+    edge_list.extend([[point[0], point[1], point[2]]])
 
     is_queued_map[point[0], point[1], point[2]] = 1
     not_queued,not_visited,is_visited_map,are_near=check_box(volume, point, is_queued_map, is_visited_map)
@@ -124,7 +126,7 @@ def stage_one(img):
 
 
     for i in xrange(0,len(not_queued)):
-        queue.put(np.array([not_queued[i],current_node,length]))
+        queue.put(np.array([not_queued[i],current_node,length,edge_list]))
         is_queued_map[not_queued[i][0], not_queued[i][1], not_queued[i][2]] = 1
 
     assert(len(not_queued)>0)
@@ -137,10 +139,6 @@ def stage_one(img):
         is_branch_map[point[0], point[1], point[2]] = last_node
         is_node_map[point[0], point[1], point[2]] = last_node
 
-
-
-
-
     print "initialized first stage"
     print "-----------------------"
     print "starting first stage..."
@@ -148,7 +146,7 @@ def stage_one(img):
     while queue.qsize():
 
         #pull item from queue
-        point,current_node,length=queue.get()
+        point,current_node,length,edge_list=queue.get()
 
         not_queued,not_visited,is_visited_map,are_near = check_box(volume, point, is_queued_map, is_visited_map)
 
@@ -156,8 +154,9 @@ def stage_one(img):
 
         #standart point
         if len(not_queued)==1:
+            edge_list.extend([[point[0], point[1], point[2]]])
             length = length + np.linalg.norm([point[0] - not_queued[0][0], point[1] - not_queued[0][1], (point[2] - not_queued[0][2]) * 10])
-            queue.put(np.array([not_queued[0],current_node,length]))
+            queue.put(np.array([not_queued[0],current_node,length,edge_list]))
             is_queued_map[not_queued[0][0], not_queued[0][1], not_queued[0][2]] = 1
             branch_point_list.extend([[point[0], point[1], point[2]]])
             is_standart_map[point[0], point[1], point[2]] = 1
@@ -168,8 +167,9 @@ def stage_one(img):
         elif len(not_queued)==0:
             last_node=last_node+1
             nodes[last_node] = point
+            edge_list.extend([[point[0], point[1], point[2]]])
             node_list.extend([[point[0], point[1], point[2]]])
-            edges.extend([[[current_node, last_node],length]])
+            edges.extend([[[current_node, last_node],length,edge_list]])
             is_term_map[point[0], point[1], point[2]] = last_node
             is_node_map[point[0], point[1], point[2]] = last_node
             print "found terminating point"
@@ -178,14 +178,17 @@ def stage_one(img):
 
         # branch point
         elif len(not_queued)>1:
+            edge_list.extend([[point[0], point[1], point[2]]])
             last_node = last_node + 1
             nodes[last_node ] = point    #build node
-            edges.extend([[[current_node, last_node],length]]) #build edge
+            edges.extend([[[current_node, last_node],length,edge_list]]) #build edge
             node_list.extend([[point[0], point[1], point[2]]])
+            edge_list = []
+            edge_list.extend([[point[0], point[1], point[2]]])
             #putting node branches in the queue
             for x in not_queued:
                 length = np.linalg.norm([point[0] - x[0], point[1] - x[1], (point[2] - x[2]) * 10])
-                queue.put(np.array([x, last_node,length]))
+                queue.put(np.array([x, last_node,length,edge_list]))
                 is_queued_map[x[0], x[1], x[2]] = 1
 
             is_branch_map[point[0], point[1], point[2]] = last_node
@@ -230,8 +233,11 @@ def stage_two(is_node_map, is_term_map, edges):
 
         _,_,_,list_near_nodes = check_box(is_node_map, point, np.zeros(is_node_map.shape, dtype=int), np.zeros(is_node_map.shape, dtype=int),2 )
 
-        for i in xrange(0,len(list_near_nodes)):
-            edges.extend([[[is_term_map[point[0],point[1],point[2]], is_node_map[list_near_nodes[i][0],list_near_nodes[i][1],list_near_nodes[i][2]]],np.linalg.norm([point[0] - list_near_nodes[i][0], point[1] - list_near_nodes[i][1], (point[2] - list_near_nodes[i][2]) * 10])]]) #build edge
+        for i in list_near_nodes:
+            edge_list = []
+            edge_list.extend([[point[0], point[1], point[2]]])
+            edge_list.extend([[i[0], i[1], i[2]]])
+            edges.extend([[[is_term_map[point[0],point[1],point[2]], is_node_map[i[0],i[1],i[2]]],np.linalg.norm([point[0] - i[0], point[1] - i[1], (point[2] - i[2]) * 10]),edge_list]]) #build edge
 
     print "------------------------"
     print "second stage finished"
@@ -376,10 +382,10 @@ if __name__ == "__main__":
 
     print "loading volume.."
 
-    with open('/mnt/localdata03/amatskev/neuraldata/test/first_try_skel_img.pkl', mode='r') as f:
-        img = pickle.load(f)
+    img = np.load("/mnt/localdata03/amatskev/neuraldata/test/skel_img.npz")['arr_0']
 
     print "volume loaded"
+
 
     time_after_volume = time()
 
@@ -388,6 +394,13 @@ if __name__ == "__main__":
 
     time_loading_volume = time_after_volume - time_before_volume
 
+    edges_build_map= np.zeros(img.shape, dtype=int)
+
+    for i in edges:
+        for u in i[2]:
+            edges_build_map[u[0],u[1],u[2]]=1
+
+    assert((edges_build_map==img).all())
     graph1_time=time()
     g, weights = extract_edges_and_lengths(nodes,edges)
     graph2_time = time()
