@@ -118,7 +118,6 @@ def stage_one(img):
     node_list = []
     length=0
     edge_list=[]
-    edge_list.extend([[point[0], point[1], point[2]]])
 
     is_queued_map[point[0], point[1], point[2]] = 1
     not_queued,not_visited,is_visited_map,are_near=check_box(volume, point, is_queued_map, is_visited_map)
@@ -126,7 +125,7 @@ def stage_one(img):
 
 
     for i in xrange(0,len(not_queued)):
-        queue.put(np.array([not_queued[i],current_node,length,edge_list]))
+        queue.put(np.array([not_queued[i],current_node,length,[[point[0], point[1], point[2]]]]))
         is_queued_map[not_queued[i][0], not_queued[i][1], not_queued[i][2]] = 1
 
     assert(len(not_queued)>0)
@@ -144,13 +143,22 @@ def stage_one(img):
     print "starting first stage..."
 
     while queue.qsize():
+        if len(edges) == 1153:
+            pass
+            print "hi"
 
         #pull item from queue
         point,current_node,length,edge_list=queue.get()
 
         not_queued,not_visited,is_visited_map,are_near = check_box(volume, point, is_queued_map, is_visited_map)
 
+        if len(edges)==1153:
+            pass
+            print "hi"
 
+        if current_node==2 and last_node==1154:
+            pass
+            print "hi"
 
         #standart point
         if len(not_queued)==1:
@@ -180,15 +188,14 @@ def stage_one(img):
         elif len(not_queued)>1:
             edge_list.extend([[point[0], point[1], point[2]]])
             last_node = last_node + 1
-            nodes[last_node ] = point    #build node
+            nodes[last_node ] = point
+            #build edge
             edges.extend([[[current_node, last_node],length,edge_list]]) #build edge
             node_list.extend([[point[0], point[1], point[2]]])
-            edge_list = []
-            edge_list.extend([[point[0], point[1], point[2]]])
             #putting node branches in the queue
             for x in not_queued:
                 length = np.linalg.norm([point[0] - x[0], point[1] - x[1], (point[2] - x[2]) * 10])
-                queue.put(np.array([x, last_node,length,edge_list]))
+                queue.put(np.array([x, last_node,length,[[point[0], point[1], point[2]]]]))
                 is_queued_map[x[0], x[1], x[2]] = 1
 
             is_branch_map[point[0], point[1], point[2]] = last_node
@@ -200,6 +207,10 @@ def stage_one(img):
         else:
             leftover_list.extend([[[point[0], point[1], point[2]],not_queued,not_visited,len(are_near)]])
 
+        if len(edges)>1:
+            if len(edges[1][2])!=25:
+                pass
+                print "hi"
 
 
     assert(len(leftover_list)==0), " there are unclassified leftovers !"
@@ -276,7 +287,7 @@ def skeleton_to_graph(img):
 
     term_list = form_term_list(is_term_map)
     term_list -= 1
-    return nodes,np.array(edges),term_list,time_between_stage_1_and_stage_2-time_before_stage_one_1,time_after_stage_2-time_between_stage_1_and_stage_2
+    return nodes,np.array(edges),term_list,time_between_stage_1_and_stage_2-time_before_stage_one_1,time_after_stage_2-time_between_stage_1_and_stage_2,is_node_map
 
 
 #for debugging purposes
@@ -432,6 +443,35 @@ def edge_paths_and_counts_for_nodes(g, weights, node_list):
             edge_paths[(u,v)] = edge_list
     return edge_paths, edge_counts
 
+def unique_rows(a):
+    a = np.ascontiguousarray(a)
+    unique_a = np.unique(a.view([('', a.dtype)]*a.shape[1]))
+    return unique_a.view(a.dtype).reshape((unique_a.shape[0], a.shape[1]))
+
+
+def compute_graph_and_paths(img):
+
+    nodes, edges, term_list, time_stage_one, time_stage_two, is_node_map = skeleton_to_graph(img)
+
+    g, edge_lens, edges = graph_and_edge_weights(nodes, edges)
+
+    check_connected_components(g)
+
+    edge_paths, edge_counts = edge_paths_and_counts_for_nodes(g, edge_lens, term_list[:30])
+
+    edge_paths_julian = {}
+
+    for pair in edge_paths.keys():
+        edge_paths_julian[pair] = []
+
+        for idx in edge_paths[pair]:
+            edge_paths_julian[pair].extend(edges[idx][2])
+            print "hi"
+
+    final_edge_paths = {}
+
+    for pair in edge_paths_julian.keys():
+        final_edge_paths[pair] = unique_rows(edge_paths_julian[pair])
 
 
 
@@ -451,7 +491,7 @@ if __name__ == "__main__":
     #time_after_volume = time()
 
 
-    nodes, edges,term_list,time_stage_one,time_stage_two = skeleton_to_graph(img)
+    nodes, edges,term_list,time_stage_one,time_stage_two,is_node_map = skeleton_to_graph(img)
 
     #time_loading_volume = time_after_volume - time_before_volume
 
@@ -476,22 +516,14 @@ if __name__ == "__main__":
             edge_paths_julian[pair].extend(edges[idx][2])
             print "hi"
 
+    final_edge_paths={}
 
+    for pair in edge_paths_julian.keys():
+        final_edge_paths[pair]=unique_rows(edge_paths_julian[pair])
 
+    pass
+    print "hi"
 
-
-
-    # print "----------------------------------------------------"
-    # print " loading volume took ", time_loading_volume," seconds"
-    # # print " masking volume took ", time_masking_volume, " seconds"
-    # # print " skeletonizing took  ", time_skeletonizing_volume, " seconds" #
-    # print " stage one took      ", time_stage_one, " seconds"
-    # print " stage two took      ", time_stage_two, " seconds"
-    # # print " all of them took    ", time_loading_volume + time_masking_volume + time_skeletonizing_volume + time_stage_one + time_stage_two, " seconds"
-    # print "  extract_edges_and_lengths took  ", graph2_time-graph1_time, " seconds"
-    # print "  check_connected_components took  ", graph3_time - graph2_time, " seconds"
-    # print "  shortest_paths_in_skeleton took  ", graph4_time-graph3_time, " seconds"
-    # print " all of them took    ", time_loading_volume + time_stage_one + time_stage_two + (graph2_time-graph1_time) + (graph3_time-graph2_time) + (graph4_time-graph3_time) , " seconds in debugging mode"
 
 
 
