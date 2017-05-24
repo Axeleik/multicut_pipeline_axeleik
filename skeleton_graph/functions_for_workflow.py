@@ -8,7 +8,228 @@ from time import time
 import h5py
 import nifty_with_cplex as nifty
 
+"""THESE ARE THE FINISHED FUNCTIONS
 
+def extract_paths_from_segmentation(
+        ds,
+        seg_path,
+        key,
+        paths_cache_folder=None):
+
+    if paths_cache_folder is not None:
+        if not os.path.exists(paths_cache_folder):
+            os.mkdir(paths_cache_folder)
+        paths_save_file = os.path.join(paths_cache_folder, 'paths_ds_%s.h5' % ds.ds_name)
+    else:
+        paths_save_file = ''
+
+    # if the cache exists, load paths from cache
+    if os.path.exists(paths_save_file):
+        all_paths = vigra.readHDF5(paths_save_file, 'all_paths')
+        # we need to reshape the paths again to revover the coordinates
+        if all_paths.size:
+            all_paths = np.array( [ path.reshape( (len(path)/3, 3) ) for path in all_paths ] )
+        paths_to_objs = vigra.readHDF5(paths_save_file, 'paths_to_objs')
+
+    # otherwise compute the paths
+
+    else:
+
+        seg = vigra.readHDF5(seg_path, key)
+        gt = deepcopy(seg)
+        img = deepcopy(seg)
+        all_paths = []
+        paths_to_objs = []
+
+
+        cut_off_array = {}
+        len_uniq=len(np.unique(seg))-1
+        for label in np.unique(seg):
+            print "Label ", label, " of ",len_uniq
+            if label == 0:
+                continue
+
+            # masking volume
+            img[seg != label] = 0
+            img[seg == label] = 1
+
+            # no skeletons too close to the borders No.2
+            #img[dt == 0] = 0
+
+            # skeletonize
+            skel_img = skeletonize_3d(img)
+
+            paths=compute_graph_and_paths(skel_img)
+
+            percentage = []
+
+            for path in paths:
+
+                #TODO better workaround
+                # workaround till tomorrow
+                workaround_array=[]
+                length_array=[]
+                last_point=path[0]
+                for i in path:
+                    workaround_array.extend([gt[i[0],i[1],i[2]]])
+                    length_array.extend([np.linalg.norm([last_point[0] - i[0],
+                                                      last_point[1] - i[1], (last_point[2] - i[2]) * 10])])
+                    last_point=i
+
+
+                all_paths.extend([path])
+                paths_to_objs.extend([label])
+
+                half_length_array=[]
+
+                for idx,obj in enumerate(length_array[:-1]):
+                    half_length_array.extend([length_array[idx]/2+length_array[idx+1]/2])
+                half_length_array.extend([length_array[-1] / 2])
+
+
+                percentage.extend([[workaround_array, half_length_array]])
+
+            cut_off_array[label] = percentage
+
+        all_paths, paths_to_objs,_ =cut_off(all_paths,paths_to_objs,cut_off_array)
+
+        if paths_cache_folder is not None:
+            # need to write paths with vlen and flatten before writing to properly save this
+            all_paths_save = np.array([pp.flatten() for pp in all_paths])
+            # TODO this is kind of a dirty hack, because write vlen fails if the vlen objects have the same lengths
+            # -> this fails if we have only 0 or 1 paths, beacause these trivially have the same lengths
+            # -> in the edge case that we have more than 1 paths with same lengths, this will still fail
+            # see also the following issue (https://github.com/h5py/h5py/issues/875)
+            try:
+                with h5py.File(paths_save_file) as f:
+                    dt = h5py.special_dtype(vlen=np.dtype(all_paths_save[0].dtype))
+                    f.create_dataset('all_paths', data=all_paths_save, dtype=dt)
+            except (TypeError, IndexError):
+                vigra.writeHDF5(all_paths_save, paths_save_file, 'all_paths')
+            # if len(all_paths_save) < 2:
+            #     vigra.writeHDF5(all_paths_save, paths_save_file, 'all_paths')
+            # else:
+            #     with h5py.File(paths_save_file) as f:
+            #         dt = h5py.special_dtype(vlen=np.dtype(all_paths_save[0].dtype))
+            #         f.create_dataset('all_paths', data = all_paths_save, dtype = dt)
+            vigra.writeHDF5(paths_to_objs, paths_save_file, 'paths_to_objs')
+
+    return all_paths, paths_to_objs
+
+
+
+def extract_paths_and_labels_from_segmentation(
+        ds,
+        seg,
+        seg_id,
+        gt,
+        correspondence_list,
+        paths_cache_folder=None):
+
+    if paths_cache_folder is not None:
+        if not os.path.exists(paths_cache_folder):
+            os.mkdir(paths_cache_folder)
+        paths_save_file = os.path.join(paths_cache_folder, 'paths_ds_%s_seg_%i.h5' % (ds.ds_name, seg_id))
+    else:
+        paths_save_file = ''
+
+    # if the cache exists, load paths from cache
+    if os.path.exists(paths_save_file):
+        all_paths = vigra.readHDF5(paths_save_file, 'all_paths')
+        # we need to reshape the paths again to revover the coordinates
+        if all_paths.size:
+            all_paths = np.array( [ path.reshape( (len(path)/3, 3) ) for path in all_paths ] )
+        paths_to_objs = vigra.readHDF5(paths_save_file, 'paths_to_objs')
+        path_classes = vigra.readHDF5(paths_save_file, 'path_classes')
+        correspondence_list = vigra.readHDF5(paths_save_file, 'correspondence_list').tolist()
+
+    # otherwise compute paths
+    else:
+
+        img = deepcopy(seg)
+        all_paths = []
+        paths_to_objs = []
+
+
+        cut_off_array = {}
+        len_uniq=len(np.unique(seg))-1
+        for label in np.unique(seg):
+            print "Label ", label, " of ",len_uniq
+            if label == 0:
+                continue
+
+            # masking volume
+            img[seg != label] = 0
+            img[seg == label] = 1
+
+
+            # skeletonize
+            skel_img = skeletonize_3d(img)
+
+            paths=compute_graph_and_paths(skel_img)
+
+            percentage = []
+
+            for path in paths:
+
+                #TODO better workaround
+                # workaround till tomorrow
+                workaround_array=[]
+                length_array=[]
+                last_point=path[0]
+                for i in path:
+                    workaround_array.extend([gt[i[0],i[1],i[2]]])
+                    length_array.extend([np.linalg.norm([last_point[0] - i[0],
+                                                      last_point[1] - i[1], (last_point[2] - i[2]) * 10])])
+                    last_point=i
+
+
+                all_paths.extend([path])
+                paths_to_objs.extend([label])
+
+                half_length_array=[]
+
+                for idx,obj in enumerate(length_array[:-1]):
+                    half_length_array.extend([length_array[idx]/2+length_array[idx+1]/2])
+                half_length_array.extend([length_array[-1] / 2])
+
+
+                percentage.extend([[workaround_array, half_length_array]])
+
+            cut_off_array[label] = percentage
+
+        all_paths,paths_to_objs,path_classes = cut_off(all_paths, paths_to_objs, cut_off_array)
+
+        # if caching is enabled, write the results to cache
+        if paths_cache_folder is not None:
+            # need to write paths with vlen and flatten before writing to properly save this
+            all_paths_save = np.array([pp.flatten() for pp in all_paths])
+            # TODO this is kind of a dirty hack, because write vlen fails if the vlen objects have the same lengths
+            # -> this fails if we have only 0 or 1 paths, beacause these trivially have the same lengths
+            # -> in the edge case that we have more than 1 paths with same lengths, this will still fail
+            # see also the following issue (https://github.com/h5py/h5py/issues/875)
+            try:
+                print 'Saving paths in {}'.format(paths_save_file)
+                with h5py.File(paths_save_file) as f:
+                    dt = h5py.special_dtype(vlen=np.dtype(all_paths_save[0].dtype))
+                    f.create_dataset('all_paths', data=all_paths_save, dtype=dt)
+            except (TypeError, IndexError):
+                vigra.writeHDF5(all_paths_save, paths_save_file, 'all_paths')
+            # if len(all_paths_save) < 2:
+            #     vigra.writeHDF5(all_paths_save, paths_save_file, 'all_paths')
+            # else:
+            #     with h5py.File(paths_save_file) as f:
+            #         dt = h5py.special_dtype(vlen=np.dtype(all_paths_save[0].dtype))
+            #         f.create_dataset('all_paths', data = all_paths_save, dtype = dt)
+            vigra.writeHDF5(paths_to_objs, paths_save_file, 'paths_to_objs')
+            vigra.writeHDF5(path_classes, paths_save_file, 'path_classes')
+            vigra.writeHDF5(correspondence_list, paths_save_file, 'correspondence_list')
+
+    return all_paths,path_classes,all_paths,correspondence_list
+
+
+
+"""
 
 
 def check_box(volume,point,is_queued_map,is_visited_map,stage=1):
