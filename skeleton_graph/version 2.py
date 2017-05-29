@@ -473,6 +473,13 @@ def compute_graph_and_paths(img):
     for pair in edge_paths_julian.keys():
         final_edge_paths[pair] = unique_rows(edge_paths_julian[pair])
 
+    workflow_paths = []
+
+    # for workflow functions
+    for pair in final_edge_paths.keys():
+        workflow_paths.extend([final_edge_paths[pair]])
+
+    return workflow_paths
 
 
 

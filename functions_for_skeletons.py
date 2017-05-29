@@ -34,8 +34,9 @@ def extract_paths_from_segmentation(
         skel = np.array(
             [[e1, e2, e3] for e1, e2, e3 in zip(np.where(skel_img)[0], np.where(skel_img)[1], np.where(skel_img)[2])])
 
-        if skel.shape[0] == 0:
-            continue
+        # FIXME what happens if the distance transform cuts too much off so there is no more skeleton ?
+        # if skel.shape[0] == 0:
+        #     continue
 
         all_paths.extend([skel])
         paths_to_objs.extend([i])
@@ -60,6 +61,7 @@ def extract_paths_and_labels_from_segmentation(
 
     # no skeletons too close to the borders No.1
     dt = ds.inp(2)
+
     dt[dt < 12] = 0  # "sensitivity"
 
     for i in np.unique(seg):
@@ -80,8 +82,9 @@ def extract_paths_and_labels_from_segmentation(
         skel = np.array(
             [[e1, e2, e3] for e1, e2, e3 in zip(np.where(skel_img)[0], np.where(skel_img)[1], np.where(skel_img)[2])])
 
-        if skel.shape[0] == 0:
-            continue
+        # FIXME what happens if the distance transform cuts too much off so there is no more skeleton ?
+        # if skel.shape[0] == 0:
+        #     continue
 
         if len(np.unique(gt[skel_img == 1])) == 1:
             path_classes.extend([True])

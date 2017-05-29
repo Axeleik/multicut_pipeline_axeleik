@@ -5,7 +5,7 @@ import numpy as np
 
 import sys
 sys.path.append(
-    '/export/home/jhennies/src/nature_methods_multicut_pipeline_devel/nature_methods_multicut_pipeline/software/')
+    '/export/home/amatskev/nature_methods_multicut_pipeline/software/')
 
 from multicut_src import DataSet
 from multicut_src import lifted_multicut_workflow

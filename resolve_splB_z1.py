@@ -3,7 +3,7 @@ import os
 
 import sys
 sys.path.append(
-    '/export/home/jhennies/src/nature_methods_multicut_pipeline_devel/nature_methods_multicut_pipeline/software/')
+    '/export/home/amatskev/nature_methods_multicut_pipeline/software/')
 
 from multicut_src import ExperimentSettings, load_dataset
 
@@ -21,7 +21,7 @@ if __name__ == '__main__':
     ExperimentSettings().rf_cache_folder = rf_cache_folder
     ExperimentSettings().anisotropy_factor = 10.
     ExperimentSettings().use_2d = False
-    ExperimentSettings().n_threads = 30
+    ExperimentSettings().n_threads = 8
     ExperimentSettings().n_trees = 500
     ExperimentSettings().solver = 'multicut_fusionmoves'
     ExperimentSettings().verbose = True
