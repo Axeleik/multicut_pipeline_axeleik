@@ -105,7 +105,7 @@ if __name__ == '__main__':
     test_seg_key = 'z/1/data'
 
     ExperimentSettings().anisotropy_factor = 10.
-    ExperimentSettings().n_threads = 30
+    ExperimentSettings().n_threads = 24
     ExperimentSettings().n_trees = 500
 
     find_false_merges(
