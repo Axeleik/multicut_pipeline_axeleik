@@ -25,7 +25,7 @@ if __name__ == '__main__':
     ExperimentSettings().rf_cache_folder = rf_cache_folder
     ExperimentSettings().anisotropy_factor = 10.
     ExperimentSettings().use_2d = False
-    ExperimentSettings().n_threads = 8
+    ExperimentSettings().n_threads = 24
     ExperimentSettings().n_trees = 500
     ExperimentSettings().solver = 'multicut_fusionmoves'
     ExperimentSettings().verbose = True
