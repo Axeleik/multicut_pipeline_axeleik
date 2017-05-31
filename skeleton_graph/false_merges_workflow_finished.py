@@ -728,7 +728,7 @@ def extract_paths_and_labels_from_segmentation(
             vigra.writeHDF5(path_classes, paths_save_file, 'path_classes')
             vigra.writeHDF5(correspondence_list, paths_save_file, 'correspondence_list')
 
-    return all_paths,path_classes,all_paths,correspondence_list
+    return all_paths, paths_to_objs, path_classes, correspondence_list
 
 
 
