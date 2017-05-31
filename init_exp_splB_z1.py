@@ -9,8 +9,8 @@ from multicut_src import DataSet
 from pipeline import init_dataset
 
 # The following locations should be importable by downstream scripts
-source_folder = '/mnt/localdata03/amatskev/neuraldata/erstellt/'
-project_folder = '/mnt/localdata03/amatskev/neuraldata/erstellt/results/'
+source_folder = '/mnt/localdata01/amatskev/cremi/'
+project_folder = '/mnt/localdata01/amatskev/cremi/results/'
 experiment_folder = project_folder + 'splB_z1/'
 meta_folder = project_folder + 'splB_z1/cache/'
 test_name = 'splB_z1'
