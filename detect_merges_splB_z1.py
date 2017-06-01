@@ -3,7 +3,7 @@ import cPickle as pickle
 
 import sys
 sys.path.append(
-    '/export/home/amatskev/nature_methods_multicut_pipeline/software/')
+    '/media/axeleik/EA62ECB562EC8821/data/pipeline/nature_methods_multicut_pipeline/software/')
 
 from multicut_src import ExperimentSettings
 

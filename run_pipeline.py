@@ -1,3 +1,6 @@
+import sys
+sys.path.append(
+    '/media/axeleik/EA62ECB562EC8821/data/pipeline/nature_methods_multicut_pipeline/software/')
 
 print '####################################################################'
 print 'Initializing ...'

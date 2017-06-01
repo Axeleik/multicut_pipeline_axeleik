@@ -3,14 +3,15 @@ import os
 
 import sys
 sys.path.append(
-    '/export/home/amatskev/nature_methods_multicut_pipeline/software/')
+    '/media/axeleik/EA62ECB562EC8821/data/pipeline/nature_methods_multicut_pipeline/software/')
+
 
 from multicut_src import DataSet
 from pipeline import init_dataset
 
 # The following locations should be importable by downstream scripts
-source_folder = '/mnt/localdata01/amatskev/cremi/'
-project_folder = '/mnt/localdata01/amatskev/cremi/results/'
+source_folder = '/media/axeleik/EA62ECB562EC8821/data/pipeline/erstellt/'
+project_folder = '/media/axeleik/EA62ECB562EC8821/data/pipeline/erstellt/results/'
 experiment_folder = project_folder + 'splB_z1/'
 meta_folder = project_folder + 'splB_z1/cache/'
 test_name = 'splB_z1'
